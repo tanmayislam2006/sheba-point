@@ -5,58 +5,61 @@ import ApiError from "../../shared/apiError";
 import httpStatus from "http-status";
 
 interface IRegisterPatientPayload {
-    name: string;
-    email: string;
-    password: string;
+  name: string;
+  email: string;
+  password: string;
 }
-
 
 const registerPatient = async (payload: IRegisterPatientPayload) => {
-    const { name, email, password } = payload;
+  const { name, email, password } = payload;
 
-    const data = await auth.api.signUpEmail({
-        body: {
-            name,
-            email,
-            password,
-            //default values
-            // needsPasswordChange: false,
-            // role: Role.PATIENT
-        }
-    })
+  const data = await auth.api.signUpEmail({
+    body: {
+      name,
+      email,
+      password,
+      //default values
+      // needsPasswordChange: false,
+      // role: Role.PATIENT
+    },
+  });
 
-    if (!data.user) {
-        throw new ApiError(httpStatus.BAD_REQUEST, "Failed to register user. Please try again.");
-    }
+  if (!data.user) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Failed to register user. Please try again.",
+    );
+  }
 
-    await prisma.$transaction(async (tx) => {
-        const user = await tx.user.findUnique({
-            where: { id: data.user.id },
-            select: { id: true }
-        });
-
-        if (!user) {
-            throw new ApiError(httpStatus.BAD_REQUEST, "User not found after registration.");
-        }
-
-        await tx.patient.upsert({
-            where: { userId: user.id },
-            update: {
-                name: data.user.name,
-                email: data.user.email
-            },
-            create: {
-                name: data.user.name,
-                email: data.user.email,
-                userId: user.id
-            }
-        });
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: data.user.id },
+      select: { id: true },
     });
 
-    return data
+    if (!user) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "User not found after registration.",
+      );
+    }
 
+    await tx.patient.upsert({
+      where: { userId: user.id },
+      update: {
+        name: data.user.name,
+        email: data.user.email,
+      },
+      create: {
+        name: data.user.name,
+        email: data.user.email,
+        userId: user.id,
+      },
+    });
+  });
 
-}
+  return data;
+};
 interface ILoginUserPayload {
   email: string;
   password: string;
@@ -86,5 +89,6 @@ const loginUser = async (payload: ILoginUserPayload) => {
   return data;
 };
 export const authService = {
-    loginUser
+  registerPatient,
+  loginUser,
 };
