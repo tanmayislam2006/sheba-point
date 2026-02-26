@@ -1,5 +1,5 @@
 import { ErrorRequestHandler } from "express";
-import ApiError from "./apiError";
+import ApiError from "./appError";
 
 type IGenericErrorMessages = {
   path: string | number;
@@ -35,3 +35,4 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     errorMessage,
   });
 };
+export default globalErrorHandler

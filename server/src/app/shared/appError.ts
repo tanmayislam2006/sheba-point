@@ -1,4 +1,4 @@
-class ApiError extends Error {
+class AppError extends Error {
   statusCode: number;
   isOperational: boolean;
   constructor(statusCode: number, message: string, isOperational = true) {
@@ -8,4 +8,4 @@ class ApiError extends Error {
     Error.captureStackTrace(this, this.constructor);
   }
 }
-export default ApiError;
+export default AppError;
