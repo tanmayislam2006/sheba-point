@@ -29,3 +29,4 @@ const loadedEnvConfig = (): EnvConfig => {
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL!,
   };
 };
+export const envVars = loadedEnvConfig();
