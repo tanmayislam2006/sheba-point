@@ -6,6 +6,8 @@ import { jwtUtils } from "./jwt";
 import { envVars } from "../config/env";
 import { cookieUtils } from "./cookie";
 
+const isProduction = envVars.NODE_ENV === "production";
+
 const getAccessToken = (payload: JwtPayload) => {
   const accessToken = jwtUtils.createToken(
     payload,
@@ -25,37 +27,41 @@ const getRefreshToken = (payload: JwtPayload) => {
 };
 
 const setAccessTokenCookie = (res: Response, token: string) => {
-    cookieUtils.setCookie(res, 'accessToken', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        path: '/',
-        // convert all minutes to milliseconds
-        //1 day
-        maxAge: 60 * 60 * 60 * 24 * 1000,
-    });
-}
+  cookieUtils.setCookie(res, "accessToken", token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    // 1 day in milliseconds
+    maxAge: 60 * 60 * 24 * 1000,
+  });
+};
 
 const setRefreshTokenCookie = (res: Response, token: string) => {
-    cookieUtils.setCookie(res, 'refreshToken', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        path: '/',
-        //7d
-        // convert all minutes to milliseconds
-        maxAge: 60 * 60 * 60 * 24 * 7* 1000,
-    });
-}
+  cookieUtils.setCookie(res, "refreshToken", token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    // 7 days in milliseconds
+    maxAge: 60 * 60 * 24 * 7 * 1000,
+  });
+};
 
 const setBetterAuthSessionCookie = (res: Response, token: string) => {
-    cookieUtils.setCookie(res, "better-auth.session_token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        path: '/',
-        //1 day
-        // convert all minutes to milliseconds
-        maxAge: 60 * 60 * 60 * 24* 1000,
-    });
-}
+  cookieUtils.setCookie(res, "better-auth.session_token", token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    // 1 day in milliseconds
+    maxAge: 60 * 60 * 24 * 1000,
+  });
+};
+export const tokenUtils = {
+  getAccessToken,
+  getRefreshToken,
+  setAccessTokenCookie,
+  setRefreshTokenCookie,
+  setBetterAuthSessionCookie,
+};
