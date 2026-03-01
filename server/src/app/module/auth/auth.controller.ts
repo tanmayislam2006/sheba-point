@@ -1,8 +1,10 @@
+import AppError from "../../shared/appError";
 import catchAsync from "../../shared/asyncHandler";
 import sendResponse from "../../shared/sendResponse";
 import { tokenUtils } from "../../utils/token";
+import { IRequestUser } from "../admin/admin.interface";
 import { authService } from "./auth.service";
-import httpStatus from "http-status";
+import httpStatus, { status } from "http-status";
 
 const registerPatient = catchAsync(async (req, res) => {
   const payload = req.body;
@@ -34,7 +36,48 @@ const loginUser = catchAsync(async (req, res) => {
   });
 });
 
+const getMe = catchAsync(async (req, res) => {
+  const user = req.user;
+  const result = await authService.getMe(user as IRequestUser);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "User Profile Fetched Successfully",
+    data: result,
+  });
+});
+
+const getNewToken = catchAsync(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  const betterAuthSessionToken = req.cookies["better-auth.session_token"];
+  if (!refreshToken) {
+    throw new AppError(status.UNAUTHORIZED, "Refresh token is missing");
+  }
+  const result = await authService.getNewToken(
+    refreshToken,
+    betterAuthSessionToken,
+  );
+
+  const { accessToken, refreshToken: newRefreshToken, sessionToken } = result;
+
+  tokenUtils.setAccessTokenCookie(res, accessToken);
+  tokenUtils.setRefreshTokenCookie(res, newRefreshToken);
+  tokenUtils.setBetterAuthSessionCookie(res, sessionToken);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "New tokens generated successfully",
+    data: {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionToken,
+    },
+  });
+});
 export const authController = {
   registerPatient,
   loginUser,
+  getMe,
+  getNewToken,
 };
