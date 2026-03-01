@@ -67,13 +67,15 @@ export const auth = betterAuth({
           });
 
           if (user && !user.emailVerified) {
-            sendEmail({
+            await sendEmail({
               to: email,
               subject: "Verify your email",
               templateName: "otp",
               templateData: {
                 name: user.name,
                 otp,
+                expiresIn: "3 minutes",
+                appName: "Sheba Point",
               },
             });
           }
@@ -85,13 +87,15 @@ export const auth = betterAuth({
           });
 
           if (user) {
-            sendEmail({
+            await sendEmail({
               to: email,
               subject: "Password Reset OTP",
               templateName: "otp",
               templateData: {
                 name: user.name,
                 otp,
+                expiresIn: "3 minutes",
+                appName: "Sheba Point",
               },
             });
           }
@@ -102,11 +106,12 @@ export const auth = betterAuth({
     }),
   ],
   session: {
-    expiresIn: 60 * 60 * 60 * 24 * 1000,
-    updateAge: 60 * 60 * 60 * 24 * 1000,
+    // better-auth expects seconds here (not milliseconds)
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 60 * 60 * 24 * 1000,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     },
   },
 

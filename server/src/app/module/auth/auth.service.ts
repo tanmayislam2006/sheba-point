@@ -220,6 +220,9 @@ const changePassword = async (
 
   const { currentPassword, newPassword } = payload;
   const result = await auth.api.changePassword({
+    headers: new Headers({
+      Authorization: `Bearer ${sessionToken}`,
+    }),
     body: {
       currentPassword,
       newPassword,
