@@ -151,15 +151,50 @@ const createAdmin = async (payload: ICreateAdminPayload) => {
     },
   });
 
-  return {
-    id: userData.user.id,
-    name: payload.admin.name,
-    email: payload.admin.email,
-    contactNumber: payload.admin.contactNumber,
-    role: Role.ADMIN,
-    needPasswordChange: true,
-    createdAt: userData.user.createdAt,
-  };
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const adminData = await tx.admin.create({
+        data: {
+          userId: userData.user.id,
+          name: payload.admin.name,
+          email: payload.admin.email,
+          contactNumber: payload.admin.contactNumber,
+          profilePhoto: payload.admin.profilePhoto,
+        },
+      });
+
+      if (payload.admin.profilePhoto) {
+        await tx.user.update({
+          where: {
+            id: userData.user.id,
+          },
+          data: {
+            image: payload.admin.profilePhoto,
+          },
+        });
+      }
+
+      const admin = await tx.admin.findUnique({
+        where: {
+          id: adminData.id,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      return admin;
+    });
+
+    return result;
+  } catch (error) {
+    await prisma.user.delete({
+      where: {
+        id: userData.user.id,
+      },
+    });
+    throw error;
+  }
 };
 
 export const userService = {

@@ -24,6 +24,7 @@ export interface ICreateAdminPayload {
   admin: {
     name: string;
     email: string;
+    profilePhoto?: string;
     contactNumber: string;
   };
 }

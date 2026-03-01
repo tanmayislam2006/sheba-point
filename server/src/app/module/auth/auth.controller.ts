@@ -1,8 +1,14 @@
+import AppError from "../../shared/appError";
 import catchAsync from "../../shared/asyncHandler";
 import sendResponse from "../../shared/sendResponse";
+import { cookieUtils } from "../../utils/cookie";
 import { tokenUtils } from "../../utils/token";
+import { IRequestUser } from "../admin/admin.interface";
 import { authService } from "./auth.service";
-import httpStatus from "http-status";
+import httpStatus, { status } from "http-status";
+import { envVars } from "../../config/env";
+
+const isProduction = envVars.NODE_ENV === "production";
 
 const registerPatient = catchAsync(async (req, res) => {
   const payload = req.body;
@@ -34,7 +40,139 @@ const loginUser = catchAsync(async (req, res) => {
   });
 });
 
+const getMe = catchAsync(async (req, res) => {
+  const user = req.user;
+  const result = await authService.getMe(user as IRequestUser);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "User Profile Fetched Successfully",
+    data: result,
+  });
+});
+
+const getNewToken = catchAsync(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  const betterAuthSessionToken = req.cookies["better-auth.session_token"];
+  if (!refreshToken) {
+    throw new AppError(status.UNAUTHORIZED, "Refresh token is missing");
+  }
+  if (!betterAuthSessionToken) {
+    throw new AppError(status.UNAUTHORIZED, "Session token is missing");
+  }
+  const result = await authService.getNewToken(
+    refreshToken,
+    betterAuthSessionToken,
+  );
+
+  const { accessToken, refreshToken: newRefreshToken, sessionToken } = result;
+
+  tokenUtils.setAccessTokenCookie(res, accessToken);
+  tokenUtils.setRefreshTokenCookie(res, newRefreshToken);
+  tokenUtils.setBetterAuthSessionCookie(res, sessionToken);
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "New tokens generated successfully",
+    data: {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionToken,
+    },
+  });
+});
+
+const changePassword = catchAsync(async (req, res) => {
+  const payload = req.body;
+  const sessionToken = req.cookies["better-auth.session_token"];
+  if (!sessionToken) {
+    throw new AppError(status.UNAUTHORIZED, "Session token is missing");
+  }
+  const result = await authService.changePassword(payload, sessionToken);
+  const { accessToken, refreshToken, token: newSessionToken } = result;
+  tokenUtils.setAccessTokenCookie(res, accessToken);
+  tokenUtils.setRefreshTokenCookie(res, refreshToken);
+  tokenUtils.setBetterAuthSessionCookie(res, newSessionToken as string);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Password changed successfully",
+    data: {
+      accessToken,
+      refreshToken,
+      sessionToken: newSessionToken,
+    },
+  });
+});
+
+const logoutUser = catchAsync(async (req, res) => {
+  const betterAuthSessionToken = req.cookies["better-auth.session_token"];
+  if (!betterAuthSessionToken) {
+    throw new AppError(status.UNAUTHORIZED, "Session token is missing");
+  }
+  const result = await authService.logoutUser(betterAuthSessionToken);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? ("none" as const) : ("lax" as const),
+    path: "/",
+  };
+
+  cookieUtils.clearCookie(res, "accessToken", {
+    ...cookieOptions,
+  });
+  cookieUtils.clearCookie(res, "refreshToken", {
+    ...cookieOptions,
+  });
+  cookieUtils.clearCookie(res, "better-auth.session_token", {
+    ...cookieOptions,
+  });
+
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "User logged out successfully",
+    data: result,
+  });
+});
+const verifyEmail = catchAsync(async (req, res) => {
+  const { email, otp } = req.body;
+  const result = await authService.verifyEmail(email, otp);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Email verified successfully",
+    data: result,
+  });
+});
+const forgotPassword = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  await authService.forgotPassword(email);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Password reset OTP sent to email successfully",
+  });
+});
+const resetPassword = catchAsync(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  await authService.resetPassword(email, otp, newPassword);
+  sendResponse(res, {
+    statusCode: status.OK,
+    success: true,
+    message: "Password reset successfully",
+  });
+});
 export const authController = {
   registerPatient,
   loginUser,
+  getMe,
+  getNewToken,
+  changePassword,
+  logoutUser,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
 };

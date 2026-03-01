@@ -8,7 +8,7 @@ const createToken = (
   const token = jwt.sign(payload, secret, { expiresIn });
   return token;
 };
-const verifyToken = (token: string, secret: string): JwtPayload | null => {
+const verifyToken = (token: string, secret: string): JwtPayload => {
   try {
     const decoded = jwt.verify(token, secret) as JwtPayload;
     return {
@@ -23,7 +23,7 @@ const verifyToken = (token: string, secret: string): JwtPayload | null => {
     };
   }
 };
-const decodeToken = (token: string): JwtPayload | null => {
+const decodeToken = (token: string): JwtPayload  => {
   const decoded = jwt.decode(token) as JwtPayload;
   return decoded;
 };
