@@ -19,8 +19,10 @@ router.post(
 );
 router.post(
   "/logout",
-  authGaud(Role.ADMIN, Role.DOCTOR, Role.PATIENT, Role.SUPER_ADMIN),
   authController.logoutUser,
 );
 router.post("/verify-email", authController.verifyEmail);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/forget-password", authController.forgotPassword);
+router.post("/reset-password", authController.resetPassword);
 export const authRoutes = router;
