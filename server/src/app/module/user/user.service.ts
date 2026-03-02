@@ -5,6 +5,8 @@ import AppError from "../../shared/appError";
 import { auth } from "../../libs/auth";
 import { Specialty } from "../../../generated/prisma/client";
 import { ICreateAdminPayload, ICreateDoctorPayload } from "./user.interface";
+import { notificationService } from "../notification/notification.service";
+import { NotificationType } from "../../../generated/prisma/enums";
 
 const createDoctor = async (payload: ICreateDoctorPayload) => {
   const specialties: Specialty[] = [];
@@ -118,6 +120,18 @@ const createDoctor = async (payload: ICreateDoctorPayload) => {
       return doctor;
     });
 
+    void notificationService
+      .createAndEmit({
+        userId: userData.user.id,
+        type: NotificationType.ACCOUNT,
+        title: "Doctor Profile Created",
+        message:
+          "Your doctor profile has been created by admin. Please review your profile details.",
+      })
+      .catch((error) => {
+        console.error("Failed to send doctor creation notification:", error);
+      });
+
     return result;
   } catch (error) {
     console.log("Transaction error : ", error);
@@ -185,6 +199,18 @@ const createAdmin = async (payload: ICreateAdminPayload) => {
 
       return admin;
     });
+
+    void notificationService
+      .createAndEmit({
+        userId: userData.user.id,
+        type: NotificationType.ACCOUNT,
+        title: "Admin Profile Created",
+        message:
+          "Your admin account has been created successfully. You can now access the admin panel.",
+      })
+      .catch((error) => {
+        console.error("Failed to send admin creation notification:", error);
+      });
 
     return result;
   } catch (error) {

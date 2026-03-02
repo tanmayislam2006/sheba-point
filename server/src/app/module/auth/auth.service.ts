@@ -14,6 +14,8 @@ import { IRequestUser } from "../admin/admin.interface";
 import { jwtUtils } from "../../utils/jwt";
 import { envVars } from "../../config/env";
 import { JwtPayload } from "jsonwebtoken";
+import { notificationService } from "../notification/notification.service";
+import { NotificationType } from "../../../generated/prisma/enums";
 
 const registerPatient = async (payload: IRegisterPatientPayload) => {
   const { name, email, password } = payload;
@@ -62,6 +64,16 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
       },
     });
   });
+  void notificationService
+    .createAndEmit({
+      userId: data.user.id,
+      type: NotificationType.ACCOUNT,
+      title: "Account Created",
+      message: "Your patient account has been created successfully.",
+    })
+    .catch((error) => {
+      console.error("Failed to send register notification:", error);
+    });
 
   return data;
 };
@@ -260,6 +272,17 @@ const changePassword = async (
     isDeleted: session.user.isDeleted,
     emailVerified: session.user.emailVerified,
   });
+  void notificationService
+    .createAndEmit({
+      userId: session.user.id,
+      type: NotificationType.SECURITY,
+      title: "Password Changed",
+      message:
+        "Your password was changed successfully. If this was not you, contact support immediately.",
+    })
+    .catch((error) => {
+      console.error("Failed to send password change notification:", error);
+    });
 
   return {
     ...result,
