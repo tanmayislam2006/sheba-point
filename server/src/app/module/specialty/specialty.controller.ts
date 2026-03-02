@@ -5,7 +5,11 @@ import { specialtyService } from "./specialty.service";
 
 // createSpecialty
 const createSpecialty = catchAsync(async (req, res) => {
-  const specialty = await specialtyService.createSpecialty(req.body);
+  const payload = {
+    ...req.body,
+    icon: req.file?.path,
+  };
+  const specialty = await specialtyService.createSpecialty(payload);
   sendResponse(res, {
     statusCode: status.CREATED,
     success: true,

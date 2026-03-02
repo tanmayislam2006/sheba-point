@@ -8,7 +8,8 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint ./src/**/*",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tsx --test src/tests/**/*.test.ts",
+    "seed:doctor": "tsx prisma/seed-doctors.ts",
     "start": "tsx watch src/server.ts",
     "build": "tsc",
     "migrate": "prisma migrate dev",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.1",
     "@types/pg": "^8.16.0",
@@ -32,16 +34,23 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/ejs": "^3.1.5",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.11",
+    "@types/qs": "^6.14.0",
     "better-auth": "^1.4.19",
+    "cloudinary": "^1.41.3",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "ejs": "^4.0.1",
     "express": "^5.2.1",
     "http-status": "^2.1.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.0",
+    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.1",
     "pg": "^8.19.0",
+    "qs": "^6.15.0",
     "zod": "^4.3.6"
   }
 }
