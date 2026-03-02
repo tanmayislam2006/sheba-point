@@ -64,7 +64,14 @@ export const deleteFileFromCloudinary = async (url: string) => {
 
     if (match && match[1]) {
       const publicId = match[1];
-      await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+      const resourceType =
+        url.includes("/raw/upload/") || url.includes("/documents/")
+          ? "raw"
+          : "image";
+
+      await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType,
+      });
       console.log(
         `File with public ID ${publicId} deleted successfully from Cloudinary.`,
       );
