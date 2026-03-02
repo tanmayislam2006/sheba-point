@@ -27,6 +27,7 @@ interface EnvConfig {
     API_KEY: string;
     API_SECRET: string;
   };
+  FRONTEND_URL: string;
 }
 const loadedEnvConfig = (): EnvConfig => {
   const requireEnvVariables = [
@@ -48,6 +49,7 @@ const loadedEnvConfig = (): EnvConfig => {
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
+    "FRONTEND_URL",
   ];
   requireEnvVariables.forEach((envVar) => {
     if (!process.env[envVar]) {
@@ -82,6 +84,7 @@ const loadedEnvConfig = (): EnvConfig => {
       API_KEY: process.env.CLOUDINARY_API_KEY as string,
       API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
     },
+    FRONTEND_URL: process.env.FRONTEND_URL as string,
   };
 };
 export const envVars = loadedEnvConfig();
