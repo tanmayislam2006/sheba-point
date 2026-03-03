@@ -1,5 +1,5 @@
 import z from "zod";
-import { Gender } from "../../../generated/prisma/enums";
+import { Gender, Role, UserStatus } from "../../../generated/prisma/enums";
 
 export const createDoctorZodSchema = z.object({
     password: z.string("Password is required").min(6, "Password must be at least 6 characters").max(20, "Password must be at most 20 characters"),
@@ -47,4 +47,21 @@ export const createAdminZodSchema = z.object({
       .min(11, "Contact number must be at least 11 characters")
       .max(14, "Contact number must be at most 14 characters"),
   }),
+});
+
+export const updateUserStatusZodSchema = z.object({
+  status: z.enum([UserStatus.ACTIVE, UserStatus.BLOCKED]),
+});
+
+export const updateUserRoleZodSchema = z.object({
+  role: z.enum([Role.SUPER_ADMIN, Role.ADMIN, Role.DOCTOR, Role.PATIENT]),
+});
+
+export const bulkUpdateUserStatusZodSchema = z.object({
+  userIds: z.array(z.uuid()).min(1, "At least one user id is required"),
+  status: z.enum([UserStatus.ACTIVE, UserStatus.BLOCKED]),
+});
+
+export const bulkDeleteUserZodSchema = z.object({
+  userIds: z.array(z.uuid()).min(1, "At least one user id is required"),
 });
