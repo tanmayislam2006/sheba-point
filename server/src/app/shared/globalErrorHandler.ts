@@ -5,16 +5,19 @@ import { envVars } from "../config/env";
 import z from "zod";
 import { handleZodError } from "./handleZodError";
 import { deleteFileFromCloudinary } from "../config/cloudinary.config";
+import { Prisma } from "../../generated/prisma/client";
+import { handlePrismaClientKnownRequestError, handlePrismaClientUnknownError, handlePrismaClientValidationError, handlerPrismaClientInitializationError, handlerPrismaClientRustPanicError } from "./handlePrismaError";
 
 const globalErrorHandler: ErrorRequestHandler = async (
   error,
   req,
   res,
-  next,
+  _next,
 ) => {
   let statusCode = 500;
   let message = "Something went wrong";
-  let errorMessage: TErrorSources[] = [];
+  let errorSources: TErrorSources[] = [];
+  let stack: string | undefined;
   try {
     if (req.file) {
       await deleteFileFromCloudinary(req.file.path);
@@ -36,35 +39,68 @@ const globalErrorHandler: ErrorRequestHandler = async (
   } catch (cleanupError) {
     console.error("Cloudinary cleanup failed:", cleanupError);
   }
-  if (error instanceof ApiError) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    const simplifiedError = handlePrismaClientKnownRequestError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorSources = [...simplifiedError.errorSources];
+    stack = error.stack;
+  } else if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    const simplifiedError = handlePrismaClientUnknownError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorSources = [...simplifiedError.errorSources];
+    stack = error.stack;
+  } else if (error instanceof Prisma.PrismaClientValidationError) {
+    const simplifiedError = handlePrismaClientValidationError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorSources = [...simplifiedError.errorSources];
+    stack = error.stack;
+  } else if (error instanceof Prisma.PrismaClientRustPanicError) {
+    const simplifiedError = handlerPrismaClientRustPanicError();
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorSources = [...simplifiedError.errorSources];
+    stack = error.stack;
+  } else if (error instanceof Prisma.PrismaClientInitializationError) {
+    const simplifiedError = handlerPrismaClientInitializationError(error);
+    statusCode = simplifiedError.statusCode;
+    message = simplifiedError.message;
+    errorSources = [...simplifiedError.errorSources];
+    stack = error.stack;
+  } else if (error instanceof ApiError) {
     statusCode = error.statusCode;
     message = error.message;
-    errorMessage = [
+    errorSources = [
       {
-        path: "",
+        path: error.name || "ApiError",
         message: error.message,
       },
     ];
+    stack = error.stack;
   } else if (error instanceof z.ZodError) {
     const simplifiedError = handleZodError(error);
     statusCode = simplifiedError.statusCode;
     message = simplifiedError.message;
-    errorMessage = simplifiedError.errorSources;
+    errorSources = simplifiedError.errorSources;
+    stack = error.stack;
   } else if (error instanceof Error) {
     message = error.message;
-    errorMessage = [
+    errorSources = [
       {
-        path: "",
+        path: error.name || "Error",
         message: error.message,
       },
     ];
+    stack = error.stack;
   }
   const errorResponse: TErrorResponse = {
     statusCode,
     success: false,
     message,
-    errorSources: errorMessage,
-    stack: envVars.NODE_ENV === "development" ? error.stack : undefined,
+    errorSources,
+    stack: envVars.NODE_ENV === "development" ? stack : undefined,
     error: envVars.NODE_ENV === "development" ? error : undefined,
   };
 
