@@ -9,6 +9,7 @@ import cors from "cors";
 import cron from "node-cron";
 import { envVars } from "./app/config/env";
 import { appointmentService } from "./app/module/appointment/appointment.service";
+import { paymentController } from "./app/module/payment/pament.controller";
 
 
 const app: Application = express();
@@ -47,9 +48,7 @@ app.use(
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to Sheba Point API");
 });
-app.post('/webhook', express.raw({ type: "application/json" }),async(req:Request,res:Response)=>{
-  console.log("Webhook received",req.body);
-})
+app.post('/webhook', express.raw({ type: "application/json" }),paymentController.handleStripeWebhookEvent)
 app.use(handleNotFound);
 app.use(globalErrorHandler);
 export default app;
