@@ -15,6 +15,7 @@
     "build": "tsc",
     "migrate": "prisma migrate dev",
     "generate": "prisma generate",
+    "stripe:webhook": "stripe listen --forward-to localhost:5000/webhook",
     "studio": "prisma studio"
   },
   "devDependencies": {
@@ -55,6 +56,7 @@
     "pg": "^8.19.0",
     "qs": "^6.15.0",
     "socket.io": "^4.8.3",
+    "stripe": "^20.4.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   }

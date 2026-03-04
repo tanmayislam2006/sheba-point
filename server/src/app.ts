@@ -47,6 +47,9 @@ app.use(
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to Sheba Point API");
 });
+app.post('/webhook', express.raw({ type: "application/json" }),async(req:Request,res:Response)=>{
+  console.log("Webhook received",req.body);
+})
 app.use(handleNotFound);
 app.use(globalErrorHandler);
 export default app;
