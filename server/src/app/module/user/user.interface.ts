@@ -1,4 +1,5 @@
-import { Gender } from "../../../generated/prisma/enums";
+import { Gender, Role, UserStatus } from "../../../generated/prisma/enums";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 export interface ICreateDoctorPayload {
   password: string;
@@ -27,4 +28,27 @@ export interface ICreateAdminPayload {
     profilePhoto?: string;
     contactNumber: string;
   };
+}
+
+export interface IUpdateUserStatusPayload {
+  status: UserStatus;
+}
+
+export interface IUpdateUserRolePayload {
+  role: Role;
+}
+
+export interface IBulkStatusPayload {
+  userIds: string[];
+  status: UserStatus;
+}
+
+export interface IBulkDeletePayload {
+  userIds: string[];
+}
+
+export interface IUserListQuery extends IQueryParams {
+  role?: Role;
+  status?: UserStatus;
+  includeDeleted?: string;
 }

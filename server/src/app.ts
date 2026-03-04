@@ -6,7 +6,10 @@ import globalErrorHandler from "./app/shared/globalErrorHandler";
 import qs from "qs";
 import path from "path";
 import cors from "cors";
+import cron from "node-cron";
 import { envVars } from "./app/config/env";
+import { appointmentService } from "./app/module/appointment/appointment.service";
+import { paymentController } from "./app/module/payment/pament.controller";
 
 
 const app: Application = express();
@@ -17,6 +20,16 @@ app.use(cookieParser());
 app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/templates`));
+
+
+cron.schedule("*/25 * * * *", async () => {
+    try {
+        console.log("Running cron job to cancel unpaid appointments...");
+        await appointmentService.cancelUnpaidAppointments();
+    } catch (error : any) {
+        console.error("Error occurred while canceling unpaid appointments:", error.message);    
+    }
+})
 app.use("/api/v1", IndexRoutes);
 
 app.use(
@@ -35,6 +48,7 @@ app.use(
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to Sheba Point API");
 });
+app.post('/webhook', express.raw({ type: "application/json" }),paymentController.handleStripeWebhookEvent)
 app.use(handleNotFound);
 app.use(globalErrorHandler);
 export default app;

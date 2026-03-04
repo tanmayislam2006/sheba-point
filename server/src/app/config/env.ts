@@ -28,6 +28,10 @@ interface EnvConfig {
     API_SECRET: string;
   };
   FRONTEND_URL: string;
+  STRIPE: {
+    STRIPE_SECRET_KEY: string;
+    STRIPE_WEBHOOK_SECRET: string;
+  };
 }
 const loadedEnvConfig = (): EnvConfig => {
   const requireEnvVariables = [
@@ -50,6 +54,8 @@ const loadedEnvConfig = (): EnvConfig => {
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
     "FRONTEND_URL",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
   ];
   requireEnvVariables.forEach((envVar) => {
     if (!process.env[envVar]) {
@@ -85,6 +91,10 @@ const loadedEnvConfig = (): EnvConfig => {
       API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
     },
     FRONTEND_URL: process.env.FRONTEND_URL as string,
+    STRIPE: {
+      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY as string,
+      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
+    },
   };
 };
 export const envVars = loadedEnvConfig();

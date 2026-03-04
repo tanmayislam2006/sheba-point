@@ -1,0 +1,34 @@
+enum NotificationType {
+  SYSTEM
+  APPOINTMENT
+  SECURITY
+  ACCOUNT
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+  PUSH
+}
+
+model Notification {
+  id        String              @id @default(uuid(7))
+  type      NotificationType    @default(SYSTEM)
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  message   String
+  metadata  Json?
+  isRead    Boolean             @default(false)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "idx_notification_userId")
+  @@index([isRead], name: "idx_notification_isRead")
+  @@index([createdAt], name: "idx_notification_createdAt")
+  @@map("notifications")
+}
