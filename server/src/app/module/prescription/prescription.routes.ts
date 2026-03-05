@@ -38,4 +38,4 @@ router.delete(
   prescriptionController.deletePrescription,
 );
 
-export const PrescriptionRoutes = router;
+export const prescriptionRoutes = router;
