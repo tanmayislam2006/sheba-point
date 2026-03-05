@@ -1,10 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { IUpdatePatientInfoPayload, IUpdatePatientProfilePayload } from "./patient.interface";
 
-export const updateMyPatientProfileMiddleware = (req : Request, res : Response, next : NextFunction) => { 
-    if (req.body.data) {
-        req.body = JSON.parse(req.body.data)
-    }
+export const updateMyPatientProfileMiddleware = (req : Request, _res : Response, next : NextFunction) => { 
     const payload: IUpdatePatientProfilePayload = req.body;
   
 
@@ -29,10 +26,7 @@ export const updateMyPatientProfileMiddleware = (req : Request, res : Response, 
             payload.medicalReports = newReports;
         }
     }
-    console.log(payload);
-
     req.body = payload;
-    console.log(req.body);
 
     next();
 };

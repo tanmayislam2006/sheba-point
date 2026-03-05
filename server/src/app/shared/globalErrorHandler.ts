@@ -4,9 +4,9 @@ import { TErrorResponse, TErrorSources } from "../interfaces/error.interface";
 import { envVars } from "../config/env";
 import z from "zod";
 import { handleZodError } from "./handleZodError";
-import { deleteFileFromCloudinary } from "../config/cloudinary.config";
 import { Prisma } from "../../generated/prisma/client";
 import { handlePrismaClientKnownRequestError, handlePrismaClientUnknownError, handlePrismaClientValidationError, handlerPrismaClientInitializationError, handlerPrismaClientRustPanicError } from "./handlePrismaError";
+import { deleteUploadedFilesFromGlobalErrorHandler } from "../utils/deleteUploadedFilesFromGlobalErrorHandler";
 
 const globalErrorHandler: ErrorRequestHandler = async (
   error,
@@ -84,6 +84,7 @@ const globalErrorHandler: ErrorRequestHandler = async (
     error: envVars.NODE_ENV === "development" ? error : undefined,
   };
 
+  await deleteUploadedFilesFromGlobalErrorHandler(req);
   res.status(statusCode).json(errorResponse);
 };
 export default globalErrorHandler;

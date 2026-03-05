@@ -6,6 +6,7 @@ import { multerUpload } from "../../config/multer.config";
 import { validateRequest } from "../../middleware/validateRequest";
 import { patientValidation } from "./patient.validation";
 import { patientController } from "./patient.controller";
+import { parseMultipartJsonData } from "../../middleware/parseMultipartJsonData";
 
 const router=Router()
 router.patch("/update-my-profile",
@@ -14,34 +15,7 @@ router.patch("/update-my-profile",
         { name : "profilePhoto", maxCount : 1},
         { name : "medicalReports", maxCount : 5}
     ]),
-    //     const payload : IUpdatePatientProfilePayload = req.body;
-
-    //     const files = req.files as {[fieldName : string] : Express.Multer.File[] | undefined};
-
-    //     if(files?.profilePhoto?.[0]){
-    //         if(!payload.patientInfo){
-    //             payload.patientInfo = {} as IUpdatePatientInfoPayload;
-    //         }
-    //         payload.patientInfo.profilePhoto = files.profilePhoto[0].path;
-    //     }
-
-    //     if(files?.medicalReports && files?.medicalReports.length > 0){
-    //         const newReports = files.medicalReports.map(file => ({
-    //             reportName : file.originalname || `Medical Report - ${new Date().getTime()}`,
-    //             reportLink : file.path,
-    //         }))
-
-    //         if(payload.medicalReports && Array.isArray(payload.medicalReports)){
-    //             payload.medicalReports = [...payload.medicalReports, ...newReports]
-    //         }else{
-    //             payload.medicalReports = newReports;
-    //         }
-    //     }
-
-    //     req.body = payload;
-
-    //     next();
-    // },
+    parseMultipartJsonData,
     updateMyPatientProfileMiddleware,
     validateRequest(patientValidation.updatePatientProfileZodSchema),
     patientController.updateMyProfile
