@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import httpStatus from "http-status";
 import catchAsync from "../../shared/asyncHandler";
 import sendResponse from "../../shared/sendResponse";
@@ -11,7 +10,7 @@ const giveReview = catchAsync(async (req, res) => {
     const user = req.user as IRequestUser;
     const result = await reviewService.giveReview(user, payload);
     sendResponse(res, {
-        statusCode: httpStatus.OK,
+        statusCode: httpStatus.CREATED,
         success: true,
         message: 'Review created successfully',
         data: result,
@@ -24,7 +23,7 @@ const getAllReviews = catchAsync(async (req, res) => {
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: 'Reviews retrieval successfully',
+        message: 'Reviews retrieved successfully',
         data: result
     });
 });
@@ -35,7 +34,7 @@ const myReviews = catchAsync(async (req, res) => {
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: 'Reviews retrieval successfully',
+        message: 'Reviews retrieved successfully',
         data: result
     });
 

@@ -1,5 +1,5 @@
 import status from "http-status";
-import { PaymentStatus, Role } from "../../../generated/prisma/enums";
+import { AppointmentStatus, PaymentStatus, Role } from "../../../generated/prisma/enums";
 
 
 import { ICreateReviewPayload, IUpdateReviewPayload } from "./review.interface";
@@ -23,8 +23,12 @@ const giveReview = async (user : IRequestUser, payload : ICreateReviewPayload) =
         throw new AppError(status.BAD_REQUEST, "You can only review after payment is done");
     };
 
+    if(appointmentData.status !== AppointmentStatus.COMPLETED){
+        throw new AppError(status.BAD_REQUEST, "You can only review after the appointment is completed");
+    };
+
     if(appointmentData.patientId !== patientData.id){
-        throw new AppError(status.BAD_REQUEST, "You can only review for your own appointments");
+        throw new AppError(status.FORBIDDEN, "You can only review for your own appointments");
     };
 
     const isReviewed = await prisma.review.findFirst({
@@ -90,7 +94,7 @@ const myReviews = async (user: IRequestUser) => {
         }
     });
     if (!isUserExist) {
-        throw new AppError(status.BAD_REQUEST, "Only patients can view their reviews");
+        throw new AppError(status.NOT_FOUND, "User not found");
     }
 
     if (isUserExist.role === Role.DOCTOR) {
@@ -126,6 +130,8 @@ const myReviews = async (user: IRequestUser) => {
             }
         });
     }
+
+    throw new AppError(status.FORBIDDEN, "Only patients or doctors can view reviews");
 };
 
 const updateReview = async (user: IRequestUser, reviewId: string, payload: IUpdateReviewPayload) => {
@@ -140,7 +146,7 @@ const updateReview = async (user: IRequestUser, reviewId: string, payload: IUpda
         }
     });
     if (!(patientData.id === reviewData.patientId)) {
-        throw new AppError(status.BAD_REQUEST, "This is not your review!")
+        throw new AppError(status.FORBIDDEN, "This is not your review!")
     }
     const result = await prisma.$transaction(async (tx) => {
         const updatedReview = await tx.review.update({
@@ -188,7 +194,7 @@ const deleteReview = async (user: IRequestUser, reviewId: string) => {
         }
     });
     if (!(patientData.id === reviewData.patientId)) {
-        throw new AppError(status.BAD_REQUEST, "This is not your review!")
+        throw new AppError(status.FORBIDDEN, "This is not your review!")
     }
 
     const result = await prisma.$transaction(async (tx) => {

@@ -5,6 +5,6 @@ export interface ICreateReviewPayload {
 }
 
 export interface IUpdateReviewPayload {
-    rating: number;
-    comment: string;
+    rating?: number;
+    comment?: string;
 }
