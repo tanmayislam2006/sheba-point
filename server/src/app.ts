@@ -9,10 +9,18 @@ import cors from "cors";
 import cron from "node-cron";
 import { envVars } from "./app/config/env";
 import { appointmentService } from "./app/module/appointment/appointment.service";
-import { paymentController } from "./app/module/payment/pament.controller";
+import { paymentController } from "./app/module/payment/payment.controller";
 
 
 const app: Application = express();
+
+// Stripe needs the exact raw body for signature verification.
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleStripeWebhookEvent,
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -48,7 +56,6 @@ app.use(
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to Sheba Point API");
 });
-app.post('/webhook', express.raw({ type: "application/json" }),paymentController.handleStripeWebhookEvent)
 app.use(handleNotFound);
 app.use(globalErrorHandler);
 export default app;

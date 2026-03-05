@@ -76,6 +76,7 @@ export const auth = betterAuth({
                 otp,
                 expiresIn: "3 minutes",
                 appName: "Sheba Point",
+                otpType: "email-verification",
               },
             });
           }
@@ -96,6 +97,7 @@ export const auth = betterAuth({
                 otp,
                 expiresIn: "3 minutes",
                 appName: "Sheba Point",
+                otpType: "forget-password",
               },
             });
           }
