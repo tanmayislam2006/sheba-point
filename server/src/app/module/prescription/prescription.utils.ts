@@ -1,136 +1,175 @@
-import PDFDocument from 'pdfkit';
-import { envVars } from '../../config/env';
+import PDFDocument from "pdfkit";
+import { envVars } from "../../config/env";
 
 interface PrescriptionData {
-    doctorName: string;
-    doctorEmail : string;
-    patientName: string;
-    patientEmail: string;
-    followUpDate: Date;
-    instructions: string;
-    prescriptionId : string;
-    appointmentDate: Date;
-    createdAt: Date;
+  doctorName: string;
+  doctorEmail: string;
+  patientName: string;
+  patientEmail: string;
+  specialization?: string;
+  followUpDate: Date;
+  instructions: string;
+  prescriptionId: string;
+  appointmentDate: Date;
+  createdAt: Date;
 }
 
-export const generatePrescriptionPDF = async (prescriptionData: PrescriptionData) : Promise<Buffer> => {
-    return new Promise((resolve, reject) => {
-        try {
-            const doc = new PDFDocument({
-                size: 'A4',
-                margin: 50,
-            });
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat("en-BD", { dateStyle: "medium" }).format(date);
 
-            const chunks: Buffer[] = [];
+const formatDateTime = (date: Date) =>
+  new Intl.DateTimeFormat("en-BD", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 
-            doc.on('data', (chunk : any) => {
-                chunks.push(chunk);
-            });
+export const generatePrescriptionPDF = async (
+  prescriptionData: PrescriptionData,
+): Promise<Buffer> =>
+  new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 36,
+      });
 
-            doc.on('end', () => {
-                resolve(Buffer.concat(chunks));
-            });
+      const chunks: Buffer[] = [];
+      const pageWidth = doc.page.width;
+      const contentWidth = pageWidth - 72;
 
-            doc.on('error', (error: any) => {
-                reject(error);
-            });
+      doc.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
 
-            // Title
-            doc.fontSize(24).font('Helvetica-Bold').text('PRESCRIPTION', {
-                align: 'center',
-            });
+      doc.on("end", () => {
+        resolve(Buffer.concat(chunks));
+      });
 
-            doc.moveDown(0.5);
-            doc
-                .fontSize(10)
-                .font('Helvetica')
-                .text('PH Healthcare Services', {
-                    align: 'center',
-                });
-            doc.text('Your Health, Our Priority', { align: 'center' });
+      doc.on("error", (error: Error) => {
+        reject(error);
+      });
 
-            doc.moveDown(1);
+      doc.rect(0, 0, pageWidth, 148).fill("#0B3C5D");
 
-            // Horizontal line
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc
+        .fillColor("#FFFFFF")
+        .font("Helvetica-Bold")
+        .fontSize(24)
+        .text("Prescription", 36, 40);
 
-            doc.moveDown(1);
+      doc
+        .font("Helvetica")
+        .fontSize(11)
+        .text("Sheba Point Digital Care", 36, 74)
+        .text(`Prescription ID: ${prescriptionData.prescriptionId}`, 36, 92);
 
-            // Doctor Information
-            doc.fontSize(11).font('Helvetica-Bold').text('Doctor Information');
-            doc
-                .fontSize(10)
-                .font('Helvetica')
-                .text(`Name: ${prescriptionData.doctorName}`)
-                .text(`Email: ${prescriptionData.doctorEmail}`);
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .text(
+          `Issued: ${formatDate(prescriptionData.createdAt)}`,
+          pageWidth - 210,
+          48,
+          {
+            width: 174,
+            align: "right",
+          },
+        );
 
-            doc.moveDown(0.8);
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text(
+          `Follow-up: ${formatDate(prescriptionData.followUpDate)}`,
+          pageWidth - 210,
+          66,
+          {
+            width: 174,
+            align: "right",
+          },
+        );
 
-            // Patient Information
-            doc.fontSize(11).font('Helvetica-Bold').text('Patient Information');
-            doc
-                .fontSize(10)
-                .font('Helvetica')
-                .text(`Name: ${prescriptionData.patientName}`)
-                .text(`Email: ${prescriptionData.patientEmail}`);
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text(
+          `Appointment: ${formatDateTime(prescriptionData.appointmentDate)}`,
+          pageWidth - 250,
+          84,
+          {
+            width: 214,
+            align: "right",
+          },
+        );
 
-            doc.moveDown(0.8);
+      doc.roundedRect(36, 128, contentWidth, 92, 10).fill("#F7FBFE");
 
-            // Appointment & Prescription Details
-            doc.fontSize(11).font('Helvetica-Bold').text('Prescription Details');
-            doc
-                .fontSize(10)
-                .font('Helvetica')
-                .text(`Prescription ID: ${prescriptionData.prescriptionId}`)
-                .text(`Appointment Date: ${new Date(prescriptionData.appointmentDate).toLocaleDateString()}`)
-                .text(`Issued Date: ${new Date(prescriptionData.createdAt).toLocaleDateString()}`);
+      doc
+        .fillColor("#1F2937")
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .text("Doctor", 52, 146)
+        .text("Patient", 320, 146);
 
-            if (prescriptionData.followUpDate) {
-                doc.text(
-                    `Follow-up Date: ${new Date(prescriptionData.followUpDate).toLocaleDateString()}`
-                );
-            }
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .text(`Name: ${prescriptionData.doctorName}`, 52, 164)
+        .text(`Email: ${prescriptionData.doctorEmail}`, 52, 180)
+        .text(
+          `Specialization: ${prescriptionData.specialization ?? "General Medicine"}`,
+          52,
+          196,
+          { width: 230 },
+        );
 
-            doc.moveDown(1);
+      doc
+        .text(`Name: ${prescriptionData.patientName}`, 320, 164)
+        .text(`Email: ${prescriptionData.patientEmail}`, 320, 180);
 
-            // Horizontal line
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc
+        .roundedRect(36, 236, contentWidth, 24, 6)
+        .fill("#EAF4FA")
+        .fillColor("#0B3C5D")
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .text("Clinical Instructions", 50, 243);
 
-            doc.moveDown(1);
+      doc
+        .fillColor("#111827")
+        .font("Helvetica")
+        .fontSize(11)
+        .text(prescriptionData.instructions, 50, 276, {
+          width: contentWidth - 28,
+          align: "left",
+          lineGap: 4,
+        });
 
-            // Instructions/Medications
-            doc.fontSize(11).font('Helvetica-Bold').text('Instructions');
-            doc.fontSize(10).font('Helvetica');
+      const footerY = Math.min(doc.y + 24, doc.page.height - 90);
+      doc
+        .strokeColor("#C7D2FE")
+        .lineWidth(1)
+        .moveTo(36, footerY)
+        .lineTo(pageWidth - 36, footerY)
+        .stroke();
 
-            // Wrap text for long instructions
-            doc.text(prescriptionData.instructions, {
-                align: 'left',
-                width: 445,
-            });
+      doc
+        .fillColor("#4B5563")
+        .font("Helvetica")
+        .fontSize(9)
+        .text(
+          "This prescription is digitally generated and valid without a physical signature.",
+          36,
+          footerY + 12,
+          { width: contentWidth, align: "center" },
+        )
+        .text(`Patient portal: ${envVars.FRONTEND_URL}`, 36, footerY + 28, {
+          width: contentWidth,
+          align: "center",
+        });
 
-            doc.moveDown(1);
-
-            // Horizontal line
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-
-            doc.moveDown(1);
-
-            // Footer
-            doc.fontSize(9).font('Helvetica').text(
-                'This is an electronically generated prescription. Please follow all instructions provided by your doctor.',
-                {
-                    align: 'center',
-                }
-            );
-
-            doc.text(`For more information, visit: ${envVars.FRONTEND_URL}`, {
-                align: 'center',
-            });
-
-            // End the document
-            doc.end();
-        } catch (error) {
-            reject(error);
-        }
-    })
-}
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });

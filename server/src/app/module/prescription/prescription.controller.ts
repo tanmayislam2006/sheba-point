@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import httpStatus from "http-status";
 import { prescriptionService } from "./prescription.service";
 import catchAsync from "../../shared/asyncHandler";
@@ -10,7 +9,7 @@ const givePrescription = catchAsync(async (req, res) => {
   const user = req.user as IRequestUser;
   const result = await prescriptionService.givePrescription(user, payload);
   sendResponse(res, {
-    statusCode: httpStatus.OK,
+    statusCode: httpStatus.CREATED,
     success: true,
     message: "Prescription created successfully",
     data: result,
@@ -33,7 +32,7 @@ const getAllPrescriptions = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Prescriptions retrieval successfully",
+    message: "Prescriptions retrieved successfully",
     data: result,
   });
 });
