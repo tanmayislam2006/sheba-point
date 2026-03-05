@@ -9,10 +9,10 @@
   <body
     style="
       margin: 0;
-      padding: 24px 12px;
-      background: #f3f6fb;
-      font-family: Arial, Helvetica, sans-serif;
-      color: #1f2937;
+      padding: 20px 10px;
+      background-color: #eef4fb;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1e293b;
     "
   >
     <table
@@ -21,10 +21,10 @@
       cellspacing="0"
       cellpadding="0"
       border="0"
-      style="max-width: 620px; margin: 0 auto"
+      style="max-width: 680px; margin: 0 auto"
     >
       <tr>
-        <td style="padding: 0">
+        <td>
           <table
             role="presentation"
             width="100%"
@@ -32,104 +32,135 @@
             cellpadding="0"
             border="0"
             style="
-              background: #ffffff;
-              border-radius: 14px;
+              border-radius: 18px;
               overflow: hidden;
-              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+              background: #ffffff;
+              box-shadow: 0 18px 48px rgba(2, 8, 23, 0.12);
             "
           >
             <tr>
               <td
                 style="
-                  background: linear-gradient(135deg, #0f766e, #0891b2);
+                  background: linear-gradient(125deg, #0b3c5d 0%, #156a96 55%, #2aa6d6 100%);
                   color: #ffffff;
-                  padding: 26px 24px;
+                  padding: 30px 26px 26px;
                 "
               >
+                <p style="margin: 0; font-size: 13px; opacity: 0.92">
+                  <%= typeof appName !== "undefined" && appName ? appName : "Sheba Point" %> Security Center
+                </p>
                 <h1
                   style="
-                    margin: 0;
-                    font-size: 22px;
-                    font-weight: 700;
+                    margin: 10px 0 0;
+                    font-size: 28px;
                     line-height: 1.2;
+                    letter-spacing: 0.3px;
+                    font-weight: 700;
                   "
                 >
-              Sheba Point
+                  <%= typeof otpType !== "undefined" && otpType === "forget-password" ? "Reset Your Password" : "Verify Your Email" %>
                 </h1>
-                <p
-                  style="
-                    margin: 8px 0 0;
-                    font-size: 14px;
-                    opacity: 0.95;
-                    line-height: 1.5;
-                  "
-                >
-                  OTP Verification
-                </p>
               </td>
             </tr>
 
             <tr>
-              <td style="padding: 28px 24px 18px">
-                <p style="margin: 0 0 12px; font-size: 16px">
-                  Hi <strong><%= typeof name !== "undefined" && name ? name : "User" %></strong>,
+              <td style="padding: 26px 24px 14px">
+                <p style="margin: 0 0 10px; font-size: 16px">
+                  Hello <strong><%= typeof name !== "undefined" && name ? name : "User" %></strong>,
                 </p>
-                <p style="margin: 0; font-size: 15px; line-height: 1.7; color: #4b5563">
-                  Use the code below to complete your verification. This code is valid for
+                <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.75">
+                  <%= typeof otpType !== "undefined" && otpType === "forget-password" ? "Use the OTP below to reset your password." : "Use the OTP below to complete your email verification." %>
+                  This code is valid for
                   <strong><%= typeof expiresIn !== "undefined" && expiresIn ? expiresIn : "2 minutes" %></strong>.
                 </p>
               </td>
             </tr>
 
             <tr>
-              <td style="padding: 8px 24px 10px">
-                <div
+              <td style="padding: 6px 24px 8px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
                   style="
-                    background: #ecfeff;
-                    border: 1px solid #99f6e4;
-                    border-radius: 12px;
-                    text-align: center;
-                    padding: 20px 12px;
+                    border: 1px solid #dbe7f3;
+                    border-radius: 14px;
+                    overflow: hidden;
+                    background: #f8fbff;
                   "
                 >
-                  <div
-                    style="
-                      font-size: 32px;
-                      font-weight: 800;
-                      letter-spacing: 10px;
-                      color: #0f766e;
-                    "
-                  >
-                    <%= otp %>
-                  </div>
-                </div>
+                  <tr>
+                    <td style="padding: 18px 16px; text-align: center">
+                      <p
+                        style="
+                          margin: 0 0 8px;
+                          font-size: 12px;
+                          color: #64748b;
+                          text-transform: uppercase;
+                          letter-spacing: 1.1px;
+                        "
+                      >
+                        One Time Password
+                      </p>
+                      <div
+                        style="
+                          margin: 0 auto;
+                          display: inline-block;
+                          background: #eff6ff;
+                          border: 1px dashed #93c5fd;
+                          border-radius: 12px;
+                          padding: 14px 18px;
+                          font-size: 34px;
+                          font-weight: 800;
+                          letter-spacing: 10px;
+                          color: #0b3c5d;
+                          line-height: 1;
+                        "
+                      >
+                        <%= otp %>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
 
             <tr>
-              <td style="padding: 12px 24px 20px">
-                <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #6b7280">
+              <td style="padding: 14px 24px 10px">
+                <div
+                  style="
+                    border-left: 4px solid #2aa6d6;
+                    background: #f8fbff;
+                    border-radius: 10px;
+                    padding: 12px 14px 12px 16px;
+                    color: #334155;
+                    font-size: 13px;
+                    line-height: 1.7;
+                  "
+                >
                   For your security, do not share this code with anyone.
-                  If you did not request this OTP, please ignore this email.
-                </p>
+                  <%= typeof otpType !== "undefined" && otpType === "forget-password" ? "If you did not request a password reset, please ignore this email." : "If you did not request email verification, please ignore this email." %>
+                </div>
               </td>
             </tr>
 
             <tr>
               <td
                 style="
-                  padding: 16px 24px 24px;
-                  border-top: 1px solid #e5e7eb;
+                  border-top: 1px solid #e2e8f0;
+                  padding: 18px 24px 24px;
                   font-size: 12px;
                   line-height: 1.7;
-                  color: #9ca3af;
+                  color: #64748b;
                 "
               >
                 <p style="margin: 0">
                   Need help?
                   <a
                     href="mailto:<%= typeof supportEmail !== 'undefined' && supportEmail ? supportEmail : 'support@shebapoint.com' %>"
-                    style="color: #0891b2; text-decoration: none"
+                    style="color: #0b3c5d; text-decoration: none; font-weight: 600"
                   >
                     <%= typeof supportEmail !== "undefined" && supportEmail ? supportEmail : "support@shebapoint.com" %>
                   </a>

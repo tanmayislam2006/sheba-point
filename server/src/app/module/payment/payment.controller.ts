@@ -16,6 +16,13 @@ const handleStripeWebhookEvent = catchAsync(async (req, res) => {
   }
   let event;
   try {
+    if (!Buffer.isBuffer(req.body)) {
+      console.error("Stripe webhook body is not raw Buffer");
+      return res.status(status.BAD_REQUEST).json({
+        message: "Invalid webhook payload. Expected raw body buffer.",
+      });
+    }
+
     event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
   } catch (error) {
     console.error("Error processing Stripe webhook:", error);
