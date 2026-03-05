@@ -5,12 +5,22 @@ import { IRequestUser } from "../admin/admin.interface";
 import { v7 as uuid7 } from "uuid";
 import {
   AppointmentStatus,
+  NotificationType,
   PaymentStatus,
   Role,
 } from "../../../generated/prisma/enums";
 import { IBookAppointmentPayload } from "./appointment.interface";
 import { envVars } from "../../config/env";
 import { stripe } from "../../config/stripe.config";
+import { notificationService } from "../notification/notification.service";
+
+const emitNotificationSafely = (
+  payload: Parameters<typeof notificationService.createAndEmit>[0],
+) => {
+  void notificationService.createAndEmit(payload).catch((error) => {
+    console.error("Failed to send appointment notification:", error);
+  });
+};
 
 const bookAppointment = async (
   payload: IBookAppointmentPayload,
@@ -67,8 +77,6 @@ const bookAppointment = async (
       },
     });
 
-    // Payment Integration
-
     const transactionId = String(uuid7());
 
     const paymentData = await tx.payment.create({
@@ -100,8 +108,6 @@ const bookAppointment = async (
       },
 
       success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success`,
-
-      // cancel_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-failed`,
       cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments`,
     });
 
@@ -111,11 +117,38 @@ const bookAppointment = async (
       paymentUrl: session.url,
     };
   });
+
+  emitNotificationSafely({
+    userId: patientData.userId,
+    type: NotificationType.APPOINTMENT,
+    title: "Appointment Booked",
+    message: `Your appointment with Dr. ${doctorData.name} has been booked successfully.`,
+    metadata: {
+      action: "appointment_booked",
+      appointmentId: result.appointmentData.id,
+      paymentId: result.paymentData.id,
+      scheduleId: scheduleData.id,
+      redirectUrl: "/dashboard/appointments",
+    },
+  });
+
+  emitNotificationSafely({
+    userId: doctorData.userId,
+    type: NotificationType.APPOINTMENT,
+    title: "New Appointment",
+    message: `${patientData.name} booked an appointment with you.`,
+    metadata: {
+      action: "appointment_booked",
+      appointmentId: result.appointmentData.id,
+      scheduleId: scheduleData.id,
+      redirectUrl: "/dashboard/appointments",
+    },
+  });
+
   return result;
 };
 
 const getMyAppointments = async (user: IRequestUser) => {
-  //user can be patient or doctor, so we need to check both
   const patientData = await prisma.patient.findUnique({
     where: {
       email: user.email,
@@ -154,6 +187,7 @@ const getMyAppointments = async (user: IRequestUser) => {
   }
   return appointments;
 };
+
 const getMySingleAppointment = async (
   appointmentId: string,
   user: IRequestUser,
@@ -202,6 +236,7 @@ const getMySingleAppointment = async (
 
   return appointment;
 };
+
 const getAllAppointments = async () => {
   const appointments = await prisma.appointment.findMany({
     include: {
@@ -212,6 +247,7 @@ const getAllAppointments = async () => {
   });
   return appointments;
 };
+
 const changeAppointmentStatus = async (
   appointmentId: string,
   appointmentStatus: AppointmentStatus,
@@ -227,10 +263,6 @@ const changeAppointmentStatus = async (
 
   const currentStatus = appointmentData.status;
 
-  /* ------------------------------------------------ */
-  /* Rule 1: Completed or Cancelled cannot change    */
-  /* ------------------------------------------------ */
-
   if (
     currentStatus === AppointmentStatus.COMPLETED ||
     currentStatus === AppointmentStatus.CANCELED
@@ -241,151 +273,211 @@ const changeAppointmentStatus = async (
     );
   }
 
-  /* ------------------------------------------------ */
-  /* ADMIN / SUPER ADMIN → Full Access               */
-  /* ------------------------------------------------ */
+  let updatedAppointment;
 
   if (user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN) {
-    return prisma.appointment.update({
+    updatedAppointment = await prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: appointmentStatus },
+    });
+  } else {
+    if (user.role === Role.DOCTOR) {
+      if (user.email !== appointmentData.doctor.email) {
+        throw new AppError(
+          status.FORBIDDEN,
+          "This appointment does not belong to you",
+        );
+      }
+
+      const doctorAllowedTransitions: Record<
+        AppointmentStatus,
+        AppointmentStatus[]
+      > = {
+        SCHEDULED: [AppointmentStatus.INPROGRESS, AppointmentStatus.CANCELED],
+        INPROGRESS: [AppointmentStatus.COMPLETED],
+        COMPLETED: [],
+        CANCELED: [],
+      };
+
+      if (!doctorAllowedTransitions[currentStatus].includes(appointmentStatus)) {
+        throw new AppError(status.BAD_REQUEST, "Invalid status update by doctor");
+      }
+    }
+
+    if (user.role === Role.PATIENT) {
+      if (user.email !== appointmentData.patient.email) {
+        throw new AppError(
+          status.FORBIDDEN,
+          "This appointment does not belong to you",
+        );
+      }
+
+      if (
+        !(
+          currentStatus === AppointmentStatus.SCHEDULED &&
+          appointmentStatus === AppointmentStatus.CANCELED
+        )
+      ) {
+        throw new AppError(
+          status.BAD_REQUEST,
+          "Patient can only cancel scheduled appointment",
+        );
+      }
+    }
+
+    updatedAppointment = await prisma.appointment.update({
       where: { id: appointmentId },
       data: { status: appointmentStatus },
     });
   }
 
-  /* ------------------------------------------------ */
-  /* DOCTOR RULE                                     */
-  /* ------------------------------------------------ */
-
-  if (user.role === Role.DOCTOR) {
-    if (user.email !== appointmentData.doctor.email) {
-      throw new AppError(
-        status.FORBIDDEN,
-        "This appointment does not belong to you",
-      );
-    }
-
-    const doctorAllowedTransitions: Record<
-      AppointmentStatus,
-      AppointmentStatus[]
-    > = {
-      SCHEDULED: [AppointmentStatus.INPROGRESS, AppointmentStatus.CANCELED],
-      INPROGRESS: [AppointmentStatus.COMPLETED],
-      COMPLETED: [],
-      CANCELED: [],
-    };
-
-    if (!doctorAllowedTransitions[currentStatus].includes(appointmentStatus)) {
-      throw new AppError(status.BAD_REQUEST, "Invalid status update by doctor");
-    }
-  }
-
-  /* ------------------------------------------------ */
-  /* PATIENT RULE                                    */
-  /* ------------------------------------------------ */
+  const metadata = {
+    action: "appointment_status_changed",
+    appointmentId: appointmentData.id,
+    previousStatus: currentStatus,
+    currentStatus: appointmentStatus,
+    redirectUrl: "/dashboard/appointments",
+  };
 
   if (user.role === Role.PATIENT) {
-    if (user.email !== appointmentData.patient.email) {
-      throw new AppError(
-        status.FORBIDDEN,
-        "This appointment does not belong to you",
-      );
-    }
+    emitNotificationSafely({
+      userId: appointmentData.doctor.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Updated",
+      message: `${appointmentData.patient.name} changed appointment status to ${appointmentStatus}.`,
+      metadata,
+    });
+  } else if (user.role === Role.DOCTOR) {
+    emitNotificationSafely({
+      userId: appointmentData.patient.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Updated",
+      message: `Dr. ${appointmentData.doctor.name} changed your appointment status to ${appointmentStatus}.`,
+      metadata,
+    });
+  } else {
+    emitNotificationSafely({
+      userId: appointmentData.patient.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Updated",
+      message: `Your appointment status was updated to ${appointmentStatus} by admin.`,
+      metadata,
+    });
 
-    if (
-      !(
-        currentStatus === AppointmentStatus.SCHEDULED &&
-        appointmentStatus === AppointmentStatus.CANCELED
-      )
-    ) {
-      throw new AppError(
-        status.BAD_REQUEST,
-        "Patient can only cancel scheduled appointment",
-      );
-    }
+    emitNotificationSafely({
+      userId: appointmentData.doctor.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Updated",
+      message: `Appointment status for ${appointmentData.patient.name} was updated to ${appointmentStatus} by admin.`,
+      metadata,
+    });
   }
 
-  /* ------------------------------------------------ */
-  /* FINAL UPDATE                                    */
-  /* ------------------------------------------------ */
-
-  return prisma.appointment.update({
-    where: { id: appointmentId },
-    data: { status: appointmentStatus },
-  });
+  return updatedAppointment;
 };
 
-const bookAppointmentWithPayLater = async (payload : IBookAppointmentPayload, user : IRequestUser) => {
-    const patientData = await prisma.patient.findUniqueOrThrow({
-        where: {
-            email: user.email,
-        }
+const bookAppointmentWithPayLater = async (
+  payload: IBookAppointmentPayload,
+  user: IRequestUser,
+) => {
+  const patientData = await prisma.patient.findUniqueOrThrow({
+    where: {
+      email: user.email,
+    },
+  });
+
+  const doctorData = await prisma.doctor.findUniqueOrThrow({
+    where: {
+      id: payload.doctorId,
+      isDeleted: false,
+    },
+  });
+
+  const scheduleData = await prisma.schedule.findUniqueOrThrow({
+    where: {
+      id: payload.scheduleId,
+    },
+  });
+
+  const doctorSchedule = await prisma.doctorSchedules.findUniqueOrThrow({
+    where: {
+      doctorId_scheduleId: {
+        doctorId: doctorData.id,
+        scheduleId: scheduleData.id,
+      },
+    },
+  });
+
+  const videoCallingId = String(uuid7());
+
+  const result = await prisma.$transaction(async (tx) => {
+    const appointmentData = await tx.appointment.create({
+      data: {
+        doctorId: payload.doctorId,
+        patientId: patientData.id,
+        scheduleId: doctorSchedule.scheduleId,
+        videoCallingId,
+      },
     });
 
-    const doctorData = await prisma.doctor.findUniqueOrThrow({
-        where: {
-            id: payload.doctorId,
-            isDeleted: false,
-        }
+    await tx.doctorSchedules.update({
+      where: {
+        doctorId_scheduleId: {
+          doctorId: payload.doctorId,
+          scheduleId: payload.scheduleId,
+        },
+      },
+      data: {
+        isBooked: true,
+      },
     });
 
-    const scheduleData = await prisma.schedule.findUniqueOrThrow({
-        where: {
-            id: payload.scheduleId,
-        }
+    const transactionId = String(uuid7());
+
+    const paymentData = await tx.payment.create({
+      data: {
+        appointmentId: appointmentData.id,
+        amount: doctorData.appointmentFee,
+        transactionId,
+      },
     });
 
-    const doctorSchedule = await prisma.doctorSchedules.findUniqueOrThrow({
-        where: {
-            doctorId_scheduleId: {
-                doctorId: doctorData.id,
-                scheduleId: scheduleData.id,
-            }
-        }
-    });
+    return {
+      appointment: appointmentData,
+      payment: paymentData,
+    };
+  });
 
-    const videoCallingId = String(uuid7());
+  emitNotificationSafely({
+    userId: patientData.userId,
+    type: NotificationType.APPOINTMENT,
+    title: "Appointment Booked",
+    message: `Your appointment with Dr. ${doctorData.name} has been booked. Please complete payment before schedule time.`,
+    metadata: {
+      action: "appointment_booked_pay_later",
+      appointmentId: result.appointment.id,
+      paymentId: result.payment.id,
+      scheduleId: scheduleData.id,
+      redirectUrl: "/dashboard/appointments",
+    },
+  });
 
-    const result = await prisma.$transaction(async (tx) => {
-        const appointmentData = await tx.appointment.create({
-            data: {
-                doctorId: payload.doctorId,
-                patientId: patientData.id,
-                scheduleId: doctorSchedule.scheduleId,
-                videoCallingId,
-            }
-        });
+  emitNotificationSafely({
+    userId: doctorData.userId,
+    type: NotificationType.APPOINTMENT,
+    title: "New Appointment",
+    message: `${patientData.name} booked an appointment with you (payment pending).`,
+    metadata: {
+      action: "appointment_booked_pay_later",
+      appointmentId: result.appointment.id,
+      scheduleId: scheduleData.id,
+      redirectUrl: "/dashboard/appointments",
+    },
+  });
 
-        await tx.doctorSchedules.update({
-            where: {
-                doctorId_scheduleId: {
-                    doctorId: payload.doctorId,
-                    scheduleId: payload.scheduleId,
-                }
-            },
-            data: {
-                isBooked: true,
-            }
-        });
+  return result;
+};
 
-        const transactionId = String(uuid7());
-
-        const paymentData = await tx.payment.create({
-            data: {
-                appointmentId: appointmentData.id,
-                amount: doctorData.appointmentFee,
-                transactionId,
-             }
-        });
-
-        return {
-            appointment: appointmentData,
-            payment: paymentData
-        };
-
-    });
-
-    return result;
-} 
 const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
   const patientData = await prisma.patient.findUniqueOrThrow({
     where: {
@@ -404,10 +496,6 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
     },
   });
 
-  if (!appointmentData) {
-    throw new AppError(status.NOT_FOUND, "Appointment not found");
-  }
-
   if (!appointmentData.payment) {
     throw new AppError(
       status.NOT_FOUND,
@@ -415,7 +503,7 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
     );
   }
 
-  if (appointmentData.payment?.status === PaymentStatus.PAID) {
+  if (appointmentData.payment.status === PaymentStatus.PAID) {
     throw new AppError(
       status.BAD_REQUEST,
       "Payment already completed for this appointment",
@@ -447,8 +535,6 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
     },
 
     success_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-success?appointment_id=${appointmentData.id}&payment_id=${appointmentData.payment.id}`,
-
-    // cancel_url: `${envVars.FRONTEND_URL}/dashboard/payment/payment-failed`,
     cancel_url: `${envVars.FRONTEND_URL}/dashboard/appointments?error=payment_cancelled`,
   });
 
@@ -456,16 +542,20 @@ const initiatePayment = async (appointmentId: string, user: IRequestUser) => {
     paymentUrl: session.url,
   };
 };
+
 const cancelUnpaidAppointments = async () => {
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
   const unpaidAppointments = await prisma.appointment.findMany({
     where: {
-      // status: AppointmentStatus.SCHEDULED,
       createdAt: {
         lte: thirtyMinutesAgo,
       },
       paymentStatus: PaymentStatus.UNPAID,
+    },
+    include: {
+      patient: true,
+      doctor: true,
     },
   });
 
@@ -507,6 +597,33 @@ const cancelUnpaidAppointments = async () => {
       });
     }
   });
+
+  for (const unpaidAppointment of unpaidAppointments) {
+    emitNotificationSafely({
+      userId: unpaidAppointment.patient.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Canceled",
+      message:
+        "Your appointment was canceled because payment was not completed on time.",
+      metadata: {
+        action: "appointment_auto_canceled_unpaid",
+        appointmentId: unpaidAppointment.id,
+        redirectUrl: "/dashboard/appointments",
+      },
+    });
+
+    emitNotificationSafely({
+      userId: unpaidAppointment.doctor.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Appointment Canceled",
+      message: `Appointment for ${unpaidAppointment.patient.name} was auto-canceled due to unpaid status.`,
+      metadata: {
+        action: "appointment_auto_canceled_unpaid",
+        appointmentId: unpaidAppointment.id,
+        redirectUrl: "/dashboard/appointments",
+      },
+    });
+  }
 };
 
 export const appointmentService = {
@@ -517,5 +634,5 @@ export const appointmentService = {
   changeAppointmentStatus,
   initiatePayment,
   cancelUnpaidAppointments,
-  bookAppointmentWithPayLater
+  bookAppointmentWithPayLater,
 };
