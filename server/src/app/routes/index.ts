@@ -9,12 +9,14 @@ import { scheduleRoutes } from "../module/schedule/schedule.routes";
 import { doctorScheduleRoute } from "../module/doctorSchedule/doctorSchedule.routes";
 import { statsRoutes } from "../module/stats/stats.routes";
 import { appointmentRoutes } from "../module/appointment/appointment.routes";
+import { patientRoutes } from "../module/patient/patient.routes";
 
 const router=Router()
 
 router.use('/auth',authRoutes)
 router.use('/specialty',specialtyRoute)
 router.use('/user',userRoutes)
+router.use('/patient',patientRoutes)
 router.use('/doctor',doctorRoutes)
 router.use('/admin',adminRoutes)
 router.use('/notification',notificationRoutes)

@@ -18,27 +18,7 @@ const globalErrorHandler: ErrorRequestHandler = async (
   let message = "Something went wrong";
   let errorSources: TErrorSources[] = [];
   let stack: string | undefined;
-  try {
-    if (req.file) {
-      await deleteFileFromCloudinary(req.file.path);
-    }
-    // delete multiple files if exist
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      const deleteFilePromises = req.files.map((file) =>
-        deleteFileFromCloudinary(file.path),
-      );
-      await Promise.all(deleteFilePromises);
-    }
-    if (req.files && !Array.isArray(req.files)) {
-      const filesFromFields = Object.values(req.files).flat();
-      const deleteFilePromises = filesFromFields.map((file) =>
-        deleteFileFromCloudinary(file.path),
-      );
-      await Promise.all(deleteFilePromises);
-    }
-  } catch (cleanupError) {
-    console.error("Cloudinary cleanup failed:", cleanupError);
-  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     const simplifiedError = handlePrismaClientKnownRequestError(error);
     statusCode = simplifiedError.statusCode;
