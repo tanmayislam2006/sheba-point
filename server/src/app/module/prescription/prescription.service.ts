@@ -1,5 +1,9 @@
 import status from "http-status";
-import { AppointmentStatus, Role } from "../../../generated/prisma/enums";
+import {
+  AppointmentStatus,
+  NotificationType,
+  Role,
+} from "../../../generated/prisma/enums";
 import {
   deleteFileFromCloudinary,
   uploadFileToCloudinary,
@@ -8,6 +12,7 @@ import { prisma } from "../../libs/prisma";
 import AppError from "../../shared/appError";
 import { sendEmail } from "../../utils/email";
 import { IRequestUser } from "../admin/admin.interface";
+import { notificationService } from "../notification/notification.service";
 import {
   ICreatePrescriptionPayload,
   IUpdatePrescriptionPayload,
@@ -22,6 +27,14 @@ const formatDateTime = (date: Date) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+
+const emitNotificationSafely = (
+  payload: Parameters<typeof notificationService.createAndEmit>[0],
+) => {
+  void notificationService.createAndEmit(payload).catch((error) => {
+    console.error("Failed to send prescription notification:", error);
+  });
+};
 
 const getDoctorSpecialization = (
   specialties: { specialty: { title: string } }[],
@@ -181,6 +194,32 @@ const givePrescription = async (
     } catch (error) {
       console.error("Failed to send prescription email notification:", error);
     }
+
+    emitNotificationSafely({
+      userId: updatedPrescription.patient.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "New Prescription Available",
+      message: `Dr. ${updatedPrescription.doctor.name} has issued your prescription.`,
+      metadata: {
+        action: "prescription_created",
+        prescriptionId: updatedPrescription.id,
+        appointmentId: updatedPrescription.appointmentId,
+        redirectUrl: "/dashboard/prescriptions",
+      },
+    });
+
+    emitNotificationSafely({
+      userId: updatedPrescription.doctor.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Prescription Issued",
+      message: `Prescription for ${updatedPrescription.patient.name} has been issued successfully.`,
+      metadata: {
+        action: "prescription_created",
+        prescriptionId: updatedPrescription.id,
+        appointmentId: updatedPrescription.appointmentId,
+        redirectUrl: "/dashboard/prescriptions",
+      },
+    });
 
     return updatedPrescription;
   } catch (error) {
@@ -393,6 +432,32 @@ const updatePrescription = async (
     } catch (emailError) {
       console.error("Failed to send updated prescription email:", emailError);
     }
+
+    emitNotificationSafely({
+      userId: result.patient.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Prescription Updated",
+      message: `Dr. ${result.doctor.name} updated your prescription.`,
+      metadata: {
+        action: "prescription_updated",
+        prescriptionId: result.id,
+        appointmentId: result.appointmentId,
+        redirectUrl: "/dashboard/prescriptions",
+      },
+    });
+
+    emitNotificationSafely({
+      userId: result.doctor.userId,
+      type: NotificationType.APPOINTMENT,
+      title: "Prescription Updated",
+      message: `Prescription for ${result.patient.name} has been updated successfully.`,
+      metadata: {
+        action: "prescription_updated",
+        prescriptionId: result.id,
+        appointmentId: result.appointmentId,
+        redirectUrl: "/dashboard/prescriptions",
+      },
+    });
 
     return result;
   } catch (error) {
