@@ -11,7 +11,6 @@ import { envVars } from "./app/config/env";
 import { appointmentService } from "./app/module/appointment/appointment.service";
 import { paymentController } from "./app/module/payment/payment.controller";
 
-
 const app: Application = express();
 
 // Stripe needs the exact raw body for signature verification.
@@ -29,25 +28,22 @@ app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
 app.set("views", path.resolve(process.cwd(), `src/app/templates`));
 
-
 cron.schedule("*/25 * * * *", async () => {
-    try {
-        console.log("Running cron job to cancel unpaid appointments...");
-        await appointmentService.cancelUnpaidAppointments();
-    } catch (error : any) {
-        console.error("Error occurred while canceling unpaid appointments:", error.message);    
-    }
-})
+  try {
+    console.log("Running cron job to cancel unpaid appointments...");
+    await appointmentService.cancelUnpaidAppointments();
+  } catch (error: any) {
+    console.error(
+      "Error occurred while canceling unpaid appointments:",
+      error.message,
+    );
+  }
+});
 app.use("/api/v1", IndexRoutes);
 
 app.use(
   cors({
-    origin: [
-      envVars.FRONTEND_URL,
-      envVars.BETTER_AUTH_URL,
-      "http://localhost:3000",
-      "http://localhost:5000",
-    ],
+    origin: ["http://localhost:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
