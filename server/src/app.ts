@@ -23,6 +23,14 @@ app.post(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(
+  cors({
+    origin: ["http://localhost:3000", envVars.FRONTEND_URL],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 // to make parse nested object from query string
 app.set("query parser", (str: string) => qs.parse(str));
 app.set("view engine", "ejs");
@@ -40,15 +48,6 @@ cron.schedule("*/25 * * * *", async () => {
   }
 });
 app.use("/api/v1", IndexRoutes);
-
-app.use(
-  cors({
-    origin: ["http://localhost:3000"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
 app.get("/", (req: Request, res: Response) => {
   res.send("Welcome to Sheba Point API");
 });
