@@ -20,3 +20,8 @@ export type LoginData = {
   redirect: boolean;
   user: AuthUser;
 };
+
+export type RegisterData = {
+  token: string | null;
+  user: AuthUser;
+};
