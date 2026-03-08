@@ -39,17 +39,6 @@ const axiosClient = axios.create({
   },
 });
 
-axiosClient.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("accessToken");
-    if (token) {
-      config.headers.set("Authorization", `Bearer ${token}`);
-    }
-  }
-
-  return config;
-});
-
 const normalizeError = (error: unknown): HttpClientError => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ message?: string }>;
