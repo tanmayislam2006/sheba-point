@@ -7,7 +7,7 @@ export type PaginationMeta = {
 
 // Matches backend sendResponse JSON shape.
 export type ApiResponse<T> = {
-  status: number;
+  status?: number;
   success: boolean;
   message: string;
   data?: T;
