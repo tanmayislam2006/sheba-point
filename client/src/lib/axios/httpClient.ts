@@ -1,5 +1,7 @@
 import { env } from "@/env";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import { isTokenExpired, isTokenExpiringSoon } from "../tokenUtils";
+import { getNewTokensWithRefreshToken } from "@/services/auth.service";
 
 const API_BASE_URL = env.NEXT_PUBLIC_URL;
 
@@ -30,6 +32,54 @@ export class HttpClientError extends Error {
   }
 }
 
+const isServer = typeof window === "undefined";
+
+async function refreshServerTokensIfNeeded(
+  accessToken: string,
+  refreshToken: string,
+): Promise<void> {
+  const shouldRefresh =
+    !accessToken ||
+    (await isTokenExpired(accessToken)) ||
+    (await isTokenExpiringSoon(accessToken, 300));
+
+  if (!shouldRefresh) {
+    return;
+  }
+
+  try {
+    await getNewTokensWithRefreshToken(refreshToken);
+  } catch (error) {
+    console.error("Error refreshing token in http client:", error);
+  }
+}
+
+async function getServerCookieHeader(): Promise<string | undefined> {
+  if (!isServer) {
+    return undefined;
+  }
+
+  const { cookies, headers } = await import("next/headers");
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+
+  const accessToken = cookieStore.get("accessToken")?.value;
+  const refreshToken = cookieStore.get("refreshToken")?.value;
+  const tokenAlreadyRefreshed = requestHeaders.get("x-token-refreshed") === "1";
+
+  if (refreshToken && !tokenAlreadyRefreshed) {
+    await refreshServerTokensIfNeeded(accessToken ?? "", refreshToken);
+  }
+
+  const refreshedCookieStore = await cookies();
+  const cookieHeader = refreshedCookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ");
+
+  return cookieHeader || undefined;
+}
+
 const axiosClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -44,7 +94,9 @@ const normalizeError = (error: unknown): HttpClientError => {
     const axiosError = error as AxiosError<{ message?: string }>;
     const status = axiosError.response?.status ?? 500;
     const message =
-      axiosError.response?.data?.message ?? axiosError.message ?? "Request failed";
+      axiosError.response?.data?.message ??
+      axiosError.message ??
+      "Request failed";
 
     return new HttpClientError({
       message,
@@ -66,11 +118,17 @@ async function request<TResponse, TBody = unknown>(
   options?: ApiRequestOption<TBody>,
 ): Promise<TResponse> {
   try {
+    const serverCookieHeader = await getServerCookieHeader();
+    const mergedHeaders: RequestHeaders = {
+      ...(options?.headers ?? {}),
+      ...(serverCookieHeader ? { Cookie: serverCookieHeader } : {}),
+    };
+
     const response = await axiosClient.request<TResponse>({
       url: endpoint,
       method,
       params: options?.params,
-      headers: options?.headers,
+      headers: mergedHeaders,
       signal: options?.signal,
       data: options?.data,
     });
