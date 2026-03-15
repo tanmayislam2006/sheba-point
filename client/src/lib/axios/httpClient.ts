@@ -1,7 +1,5 @@
 import { env } from "@/env";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import { isTokenExpired, isTokenExpiringSoon } from "../tokenUtils";
-import { getNewTokensWithRefreshToken } from "@/services/auth.service";
 
 const API_BASE_URL = env.NEXT_PUBLIC_URL;
 
@@ -38,6 +36,12 @@ async function refreshServerTokensIfNeeded(
   accessToken: string,
   refreshToken: string,
 ): Promise<void> {
+  const [{ isTokenExpired, isTokenExpiringSoon }, { getNewTokensWithRefreshToken }] =
+    await Promise.all([
+      import("../tokenUtils"),
+      import("@/services/auth.service"),
+    ]);
+
   const shouldRefresh =
     !accessToken ||
     (await isTokenExpired(accessToken)) ||
@@ -142,21 +146,25 @@ async function request<TResponse, TBody = unknown>(
 export const httpClient = {
   get: <TResponse>(endpoint: string, options?: ApiRequestOption) =>
     request<TResponse>("get", endpoint, options),
+
   post: <TResponse, TBody = unknown>(
     endpoint: string,
     data?: TBody,
     options?: Omit<ApiRequestOption<TBody>, "data">,
   ) => request<TResponse, TBody>("post", endpoint, { ...options, data }),
+
   put: <TResponse, TBody = unknown>(
     endpoint: string,
     data?: TBody,
     options?: Omit<ApiRequestOption<TBody>, "data">,
   ) => request<TResponse, TBody>("put", endpoint, { ...options, data }),
+
   patch: <TResponse, TBody = unknown>(
     endpoint: string,
     data?: TBody,
     options?: Omit<ApiRequestOption<TBody>, "data">,
   ) => request<TResponse, TBody>("patch", endpoint, { ...options, data }),
+
   delete: <TResponse>(endpoint: string, options?: ApiRequestOption) =>
     request<TResponse>("delete", endpoint, options),
 };
