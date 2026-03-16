@@ -8,12 +8,12 @@ import { updateDoctorZodSchema } from "./doctor.validation";
 const router = Router();
 router.get(
   "/",
-  authGaud(Role.ADMIN, Role.SUPER_ADMIN),
+  // authGaud(Role.ADMIN, Role.SUPER_ADMIN),
   doctorController.getAllDoctors,
 );
 router.get(
   "/:id",
-  authGaud(Role.ADMIN, Role.SUPER_ADMIN),
+  // authGaud(Role.ADMIN, Role.SUPER_ADMIN),
   doctorController.getDoctorById,
 );
 router.patch(
